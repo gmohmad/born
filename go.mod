@@ -7,6 +7,7 @@ require (
 	github.com/gogpu/gputypes v0.2.0
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/stretchr/testify v1.11.1
+	gonum.org/v1/gonum v0.17.0
 )
 
 require (

@@ -4,6 +4,10 @@ import (
 	"fmt"
 
 	"github.com/born-ml/born/internal/tensor"
+	"gonum.org/v1/gonum/blas"
+	"gonum.org/v1/gonum/blas/blas32"
+	"gonum.org/v1/gonum/blas/blas64"
+	_ "gonum.org/v1/gonum/blas/gonum"
 )
 
 // MatMul performs matrix multiplication.
@@ -51,69 +55,42 @@ func (cpu *CPUBackend) MatMul(a, b *tensor.RawTensor) *tensor.RawTensor {
 
 // matmulFloat32 performs naive matrix multiplication for float32.
 // C[i,j] = sum_k A[i,k] * B[k,j]
-// TODO: Replace with gonum/blas SGEMM for better performance.
 func matmulFloat32(c, a, b []float32, m, k, n int) {
-	// Initialize C to zero
-	for i := range c {
-		c[i] = 0
-	}
-
-	// Naive O(n³) implementation
-	for i := 0; i < m; i++ {
-		for j := 0; j < n; j++ {
-			sum := float32(0)
-			for kIdx := 0; kIdx < k; kIdx++ {
-				sum += a[i*k+kIdx] * b[kIdx*n+j]
-			}
-			c[i*n+j] = sum
-		}
-	}
+	blas32.Gemm(blas.NoTrans, blas.NoTrans, 1.0,
+		blas32.General{Rows: m, Cols: k, Data: a, Stride: k},
+		blas32.General{Rows: k, Cols: n, Data: b, Stride: n},
+		0.0,
+		blas32.General{Rows: m, Cols: n, Data: c, Stride: n})
 }
 
 func matmulFloat64(c, a, b []float64, m, k, n int) {
-	for i := range c {
-		c[i] = 0
-	}
-
-	for i := 0; i < m; i++ {
-		for j := 0; j < n; j++ {
-			sum := float64(0)
-			for kIdx := 0; kIdx < k; kIdx++ {
-				sum += a[i*k+kIdx] * b[kIdx*n+j]
-			}
-			c[i*n+j] = sum
-		}
-	}
+	blas64.Gemm(blas.NoTrans, blas.NoTrans, 1.0,
+		blas64.General{Rows: m, Cols: k, Data: a, Stride: k},
+		blas64.General{Rows: k, Cols: n, Data: b, Stride: n},
+		0.0,
+		blas64.General{Rows: m, Cols: n, Data: c, Stride: n})
 }
 
 func matmulInt32(c, a, b []int32, m, k, n int) {
-	for i := range c {
-		c[i] = 0
-	}
-
-	for i := 0; i < m; i++ {
-		for j := 0; j < n; j++ {
-			sum := int32(0)
-			for kIdx := 0; kIdx < k; kIdx++ {
-				sum += a[i*k+kIdx] * b[kIdx*n+j]
-			}
-			c[i*n+j] = sum
-		}
-	}
+	blas32.Gemm(blas.NoTrans, blas.NoTrans, 1.0,
+		blas32.General{Rows: m, Cols: k, Data: intTofloat32(a), Stride: k},
+		blas32.General{Rows: k, Cols: n, Data: intTofloat32(b), Stride: n},
+		0.0,
+		blas32.General{Rows: m, Cols: n, Data: intTofloat32(c), Stride: n})
 }
 
 func matmulInt64(c, a, b []int64, m, k, n int) {
-	for i := range c {
-		c[i] = 0
-	}
+	blas32.Gemm(blas.NoTrans, blas.NoTrans, 1.0,
+		blas32.General{Rows: m, Cols: k, Data: intTofloat32(a), Stride: k},
+		blas32.General{Rows: k, Cols: n, Data: intTofloat32(b), Stride: n},
+		0.0,
+		blas32.General{Rows: m, Cols: n, Data: intTofloat32(c), Stride: n})
+}
 
-	for i := 0; i < m; i++ {
-		for j := 0; j < n; j++ {
-			sum := int64(0)
-			for kIdx := 0; kIdx < k; kIdx++ {
-				sum += a[i*k+kIdx] * b[kIdx*n+j]
-			}
-			c[i*n+j] = sum
-		}
+func intTofloat32[T int32 | int64](in []T) []float32 {
+	out := make([]float32, len(in))
+	for i, v := range in {
+		out[i] = float32(v)
 	}
+	return out
 }
